@@ -61,42 +61,34 @@ def wind_direction():
 	plt.show()
 
 def wind_direction_plot(values, label):
-	# Define direction bins (16 cardinal directions)
-	bins = numpy.linspace(0, 360, 17)
-	directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
-
-	# Calculate frequency of wind directions
-	hist, _ = numpy.histogram(values, bins=bins)
-	hist = hist / hist.sum()  # Normalize to percentages
-
-	# Create figure
 	fig = plt.figure(figsize=(12, 12))
-	ax = fig.add_subplot(111, polar=True)
+	ax = fig.add_subplot(111, projection='polar')
 
-	# Convert to radians and set North at top
-	theta = numpy.radians(numpy.linspace(0, 360, 16))
-	ax.set_theta_zero_location('N')
-	ax.set_theta_direction(-1)
+	# Convert degrees to radians and adjust for meteorological convention
+	theta = numpy.radians(values)
+	theta = theta % (2 * numpy.pi)  # Ensure values stay within 0-2π
+
+	# Create bins for directions (16 cardinal directions)
+	bins = numpy.linspace(0, 2*numpy.pi, 17)
+
+	# Calculate histogram
+	hist, _ = numpy.histogram(theta, bins=bins)
 
 	# Plot bars
-	width = 2 * numpy.pi / 16
-	bars = ax.bar(theta, hist, width=width, bottom=0.0, color='skyblue', edgecolor='black')
+	width = 2*numpy.pi/16  # Width of each bar
+	bars = ax.bar(bins[:-1], hist, width=width, color='#4682B4', alpha=0.7, edgecolor='black')
 
-	# Customize plot
-	ax.set_title(label, va='bottom', pad=20, fontsize=18)
+	# Customize the plot
+	ax.set_theta_zero_location('N')  # Put 0° (North) at top
+	ax.set_theta_direction(-1)       # Clockwise direction
+	ax.set_xticks(numpy.linspace(0, 2*numpy.pi, 8, endpoint=False))
+	ax.set_xticklabels(['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'])
 
-	# Set direction labels
-	ax.set_xticks(theta)
-	ax.set_xticklabels(directions)
-
-	# Add percentage labels
-	for bar, h in zip(bars, hist):
-		height = bar.get_height()
-		ax.text(bar.get_x() + bar.get_width()/2., height, f'{h*100:.1f}%', ha='center', va='bottom')
+	# Add title
+	plt.title(label, pad=20, fontsize=18)
 
 	# Add grid
 	ax.yaxis.grid(True)
-	ax.set_rlabel_position(270)
 
 	plt.tight_layout()
 
