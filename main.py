@@ -49,13 +49,18 @@ def fetch_history(type, variable):
 
 	return data[type][variable]
 
-def wind_rose():
-	label = "Hourly Wind Direction at {wind_height} (degrees)".format(wind_height = wind_height)
+def wind_direction():
 	type = "hourly"
 	variable = "winddirection_{wind_height}".format(wind_height = wind_height)
+	label = "Hourly Wind Direction at {wind_height} (degrees)".format(wind_height = wind_height)
 
 	values = fetch_history(type, variable)
 
+	plt = wind_direction_plot(values, label)
+	plt.savefig("plots/{location}_{type}_{variable}.png".format(location = location, type = type, variable = variable))
+	plt.show()
+
+def wind_direction_plot(values, label):
 	# Define direction bins (16 cardinal directions)
 	bins = numpy.linspace(0, 360, 17)
 	directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
@@ -78,7 +83,7 @@ def wind_rose():
 	bars = ax.bar(theta, hist, width=width, bottom=0.0, color='skyblue', edgecolor='black')
 
 	# Customize plot
-	ax.set_title(label, va='bottom', pad=20)
+	ax.set_title(label, va='bottom', pad=20, fontsize=18)
 
 	# Set direction labels
 	ax.set_xticks(theta)
@@ -95,19 +100,20 @@ def wind_rose():
 
 	plt.tight_layout()
 
-	plt.savefig("plots/{location}_{type}_{variable}.png".format(location = location, type = type, variable = variable))
+	return plt
 
-	plt.show()
-
-def wind_speed_histogram():
-	label = "Hourly Wind Speed at {wind_height} (m/s)".format(wind_height = wind_height)
+def wind_speed():
 	type = "hourly"
 	variable = "wind_speed_{wind_height}".format(wind_height = wind_height)
+	label = "Hourly Wind Speed at {wind_height} (m/s)".format(wind_height = wind_height)
 
 	values = fetch_history(type, variable)
 
-	print("Number of values: {}".format(len(values)))
+	plt = wind_speed_plot(values, label)
+	plt.savefig("plots/{location}_{type}_{variable}.png".format(location = location, type = type, variable = variable))
+	plt.show()
 
+def wind_speed_plot(values, label):
 	quantiles = numpy.quantile(values, [0.05, 0.20, 0.50, 0.80, 0.95]).tolist()
 	print("Quantiles: {}".format(quantiles))
 
@@ -129,9 +135,9 @@ def wind_speed_histogram():
 	plt.ylabel('Frequency', fontsize=16)
 	plt.grid(True, alpha=0.3)
 
-	plt.savefig("plots/{location}_{type}_{variable}.png".format(location = location, type = type, variable = variable))
+	plt.tight_layout()
 
-	plt.show()
+	return plt
 
-wind_rose()
-wind_speed_histogram()
+wind_direction()
+wind_speed()
