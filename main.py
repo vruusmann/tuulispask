@@ -27,7 +27,7 @@ wind_height = "100m"
 if len(sys.argv) > 2:
 	wind_height = sys.argv[2]
 
-def fetch_history(id, type, variable, start_date, end_date):
+def fetch_history(id, type, variable, start_date, end_date, datetime_filter = None):
 	url = "https://archive-api.open-meteo.com/v1/archive"
 	params = {
 		"latitude": latitude,
@@ -46,14 +46,20 @@ def fetch_history(id, type, variable, start_date, end_date):
 
 	data = response.json()
 
-	return data[type][variable]
+	datetimes = data[type]["time"]
+	values = data[type][variable]
 
-def wind_direction(id, start_date, end_date):
+	if datetime_filter:
+		values = [value for value, datetime in zip(values, datetimes) if datetime_filter(datetime)]
+
+	return values
+
+def wind_direction(id, start_date, end_date, datetime_filter = None):
 	type = "hourly"
 	variable = "winddirection_{wind_height}".format(wind_height = wind_height)
 	title = "Hourly Wind Direction at {wind_height} in degrees ({start_date} to {end_date})".format(wind_height = wind_height, start_date = start_date, end_date = end_date)
 
-	values = fetch_history(id, type, variable, start_date, end_date)
+	values = fetch_history(id, type, variable, start_date, end_date, datetime_filter = datetime_filter)
 
 	plt = wind_direction_plot(values, title)
 	plt.savefig("plots/{id}.png".format(id = id))
@@ -93,12 +99,12 @@ def wind_direction_plot(values, title):
 
 	return plt
 
-def wind_speed(id, start_date, end_date):
+def wind_speed(id, start_date, end_date, datetime_filter = None):
 	type = "hourly"
 	variable = "wind_speed_{wind_height}".format(wind_height = wind_height)
 	title = "Hourly Wind Speed at {wind_height} in m/s ({start_date} to {end_date})".format(wind_height = wind_height, start_date = start_date, end_date = end_date)
 
-	values = fetch_history(id, type, variable, start_date, end_date)
+	values = fetch_history(id, type, variable, start_date, end_date, datetime_filter = datetime_filter)
 
 	plt = wind_speed_plot(values, title)
 	plt.savefig("plots/{id}.png".format(id = id))
@@ -108,21 +114,20 @@ def wind_speed_plot(values, title):
 	quantiles = None
 
 	if len(values) > 100:
-		quantiles = numpy.quantile(values, [0.05, 0.20, 0.50, 0.80, 0.95]).tolist()
+		quantiles = numpy.quantile(values, [0.25, 0.50, 0.75]).tolist()
 		print("Quantiles: {}".format(quantiles))
+
+	xmax = 20
 
 	# Create histogram
 	plt.figure(figsize=(12, 8))
-	plt.hist(values, bins=30, edgecolor='black')
+	plt.hist(values, bins=numpy.arange(0, xmax + 1, 1), edgecolor='black')
+	plt.xlim(0, xmax)
 
 	if quantiles:
 		for quantile in quantiles:
-			if quantile in (quantiles[0], quantiles[-1]):
-				color = "red"
-				linestyle = "-"
-			else:
-				color = "black"
-				linestyle = "--"
+			color = "black"
+			linestyle = "--"
 			plt.axvline(x=quantile, color=color, linestyle=linestyle)
 
 	plt.title(title, fontsize=18)
@@ -141,5 +146,33 @@ start_date = end_date - timedelta(days=365)
 start_date_str = start_date.strftime('%Y-%m-%d')
 end_date_str = end_date.strftime('%Y-%m-%d')
 
-wind_direction("{location}_wind_direction_past_year".format(location = location), start_date_str, end_date_str)
-wind_speed("{location}_wind_speed_past_year".format(location = location), start_date_str, end_date_str)
+#wind_direction("{location}_wind_direction_past_year".format(location = location), start_date_str, end_date_str)
+#wind_speed("{location}_wind_speed_past_year".format(location = location), start_date_str, end_date_str)
+
+location = "joekaaru"
+
+latitude, longitude = coordinates[location]
+
+# The day of TA experiments
+start_date_str = "2024-11-26"
+end_date_str = "2024-11-28"
+
+def datetime_filter(datetime_str):
+
+	# Add 2 hours to transform from GMT TZ to Estonia TZ
+	def accept(dt):
+		if dt.day == 26:
+			return dt.hour >= (14 + 2)
+		elif dt.day == 27:
+			return dt.hour <= (14 + 2)
+		else:
+			return False
+
+	dt = datetime.fromisoformat(datetime_str)
+
+	result = accept(dt)
+	#print("{} -> {}".format(datetime_str, result))
+	return result
+
+wind_direction("{location}_wind_direction_exp".format(location = location), start_date_str, end_date_str, datetime_filter = datetime_filter)
+wind_speed("{location}_wind_speed_exp".format(location = location), start_date_str, end_date_str, datetime_filter = datetime_filter)
